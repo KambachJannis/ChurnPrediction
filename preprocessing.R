@@ -136,3 +136,4 @@ d19_churn = d19 %>% select(ID, Flag_cancellation)
 d19_churn = unique(d19_churn)
 colnames(d19_churn)[2] = "Target"
 d18_ready = merge(d18, d19_churn, by = "ID")
+d18_ready = d18_ready[,-16]
