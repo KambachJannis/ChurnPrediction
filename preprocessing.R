@@ -5,19 +5,23 @@ library(ploty)
 library(readxl)
 library(mice)
 library(corrr)
+library(caret)
 
 # Load data
 d18 = read.csv2(file="Data_set_Jan18.csv", stringsAsFactors = FALSE)
+d19 = read.csv2(file="Data_set_Jan19.csv", stringsAsFactors = FALSE)
 
 # Rename first column because of unicode error
 colnames(d18)[1] = "ID"
+colnames(d19)[1] = "ID"
 
 #------------------------------
 # Syntactic preparation of data 
 #------------------------------
 
 # Set all missing values to NA
-d18[d18=="-"] <- NA
+d18[d18=="-"] = NA
+d19[d19=="-"] = NA
 
 # Convert numeric values from strings
 d18$Age = as.numeric(d18$Age)
@@ -48,12 +52,12 @@ d18$Vorteilswelt_customer_since = as.Date(d18$Vorteilswelt_customer_since, forma
 
 # Transform contract duration dates into days left based on time of dataset
 basedate = as.Date("01.02.2018","%d.%m.%Y")
-d18$Minimum_contract_duration = d18$Minimum_contract_term - basedate
-d18$Maximum_contract_duration = d18$Maximum_contract_term - basedate
+d18$Minimum_contract_duration = as.numeric(d18$Minimum_contract_term - basedate, "days")
+d18$Maximum_contract_duration = as.numeric(d18$Maximum_contract_term - basedate, "days")
 
 # Transform Vorteilswelt signup date into membership duration based on current date
 basedate2 = as.Date("01.01.2020", "%d.%m.%Y")
-d18$Vorteilswelt_customer_duraction = basedate2 - d18$Vorteilswelt_customer_since
+d18$Vorteilswelt_customer_duraction = as.numeric(basedate2 - d18$Vorteilswelt_customer_since, "days")
 
 # Merge client type and title into single 4-level factor
 for(i in 1:nrow(d18)){
@@ -75,7 +79,62 @@ d18$Client_type = as.factor(d18$Client_type)
 d18 = d18[,-2]
 
 # Credit rating traffic light
-d18 = d18[,-12]
+d18 = d18[,-11]
 
 # Invoice shock
-d18 = d18[,-22]
+d18 = d18[,-20]
+
+# Cancellation Flag
+d18 = d18[,-20]
+
+# Minimum/Maximum contract terms
+d18 = d18[,-8]
+d18 = d18[,-8]
+
+# Vorteilswelt customer since
+d18 = d18[,-16]
+
+#------------------------
+# Deal with duplicate IDs
+#------------------------
+
+# If credit score is different, set highest score in all rows
+n_occur = data.frame(table(unique(d18[,-12])$ID))
+duplicates = n_occur[n_occur$Freq > 1,]
+for(i in 1:nrow(duplicates)){
+  tempIDs = which(d18$ID == as.character(duplicates[i,]$Var1))
+  temp = max(d18[tempIDs,]$Credit_rating_score)
+  d18[tempIDs,]$Credit_rating_score = temp
+}
+
+# Sum up open item amount of duplicate IDs
+d18 = d18 %>% group_by(ID) %>% summarise(Client_type=first(Client_type), Age=first(Age), Flag_e.mail_deposited=first(Flag_e.mail_deposited), 
+                                              Flag_mobile_deposited=first(Flag_mobile_deposited), Number_contractual_relationships=first(Number_contractual_relationships), 
+                                              Customer_for_years=first(Customer_for_years),Credit_rating_score=first(Credit_rating_score), Total_consumption=first(Total_consumption),
+                                              Open_item_amount=sum(Open_item_amount), Flag_advertising_permission_e.mail=first(Flag_advertising_permission_e.mail),
+                                              Flag_advertising_permission_post=first(Flag_advertising_permission_post), Flag_advertising_permission_telephone=first(Flag_advertising_permission_telephone),
+                                              OptIn_data_protection_regulations=first(OptIn_data_protection_regulations), OptIn_newsletter=first(OptIn_newsletter),
+                                              Factor_subsequent_payment=first(Factor_subsequent_payment), Sum_contribution_margin_2=first(Sum_contribution_margin_2),
+                                              Minimum_contract_duration=first(Minimum_contract_duration), Maximum_contract_duration=first(Maximum_contract_duration),
+                                              Vorteilswelt_customer_duraction=first(Vorteilswelt_customer_duraction))
+
+#-----------------------------------------------------
+# Deal with remaining specific problems in the dataset
+#-----------------------------------------------------
+
+# Todo
+
+#--------------------------
+# Prepare data for training
+#--------------------------
+
+# One-hot-encoding to eleminiate multi-level factors
+dummy = dummyVars(" ~ Client_type", data = d18)
+d18_encoded = data.frame(predict(dummy, newdata = d18))
+d18 = cbind(d18,d18_encoded)
+
+# Move churn flag from 2019 to 2018 to have a target variable
+d19_churn = d19 %>% select(ID, Flag_cancellation)
+d19_churn = unique(d19_churn)
+colnames(d19)[2] = "Target"
+d18_ready = merge(d18, d19_churn, by = "ID")
