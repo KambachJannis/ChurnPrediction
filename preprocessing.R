@@ -93,15 +93,6 @@ d18 = d18[,-8]
 # Vorteilswelt customer since
 d18 = d18[,-16]
 
-#----------------------------------------------
-# Remove all entries with cancellation_flag = 1
-#----------------------------------------------
-
-#d18 = d18[-which(d18$Flag_cancellation == 1),]
-
-# Remove Cancellation Flag Column
-#d18 = d18[,-17]
-
 #------------------------
 # Deal with duplicate IDs
 #------------------------
@@ -139,16 +130,16 @@ d18 = d18[,-2]
 d18 = d18[,-19]
 colnames(d18)[18] = "Contract_duration"
 
+# Missing value imputation
+imputation = mice(d18[,-c(8,9,16)])
+d18_imputed = complete(imputation)
+d18_imputed = cbind(d18_imputed,d18[,c(8,9,16)])
+
 # Move churn flag from 2019 to 2018 to have a target variable
 #d19_churn = d19 %>% select(ID, Flag_cancellation)
 #d19_churn = unique(d19_churn)
 #colnames(d19_churn)[2] = "Target"
 #d18_ready = merge(d18, d19_churn, by = "ID")
-
-# Missing value imputation
-imputation = mice(d18[,-c(8,9,16)])
-d18_imputed = complete(imputation)
-d18_imputed = cbind(d18_imputed,d18[,c(8,9,16)])
 
 #------------------------------------------------------------------------------------------
 #-------------------------------- Exploration ---------------------------------------------
