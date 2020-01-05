@@ -1,5 +1,4 @@
 library(lubridate)
-library(tidyr)
 library(dplyr)
 library(mice)
 library(corrr)
@@ -43,6 +42,11 @@ d18$Minimum_contract_term = as.Date(d18$Minimum_contract_term, format="%d.%m.%Y"
 d18$Maximum_contract_term = as.Date(d18$Minimum_contract_term, format="%d.%m.%Y")
 d18$Vorteilswelt_customer_since = as.Date(d18$Vorteilswelt_customer_since, format="%d.%m.%Y")
 
+# Set open item amount to 0 if NA
+d18[which(is.na(d18$Open_item_amount)),]$Open_item_amount = 0
+
+# Remove 1 column where ID is NA
+d18 = d18[-which(is.na(d18$ID)),]
 
 #-----------------------------
 # Semantic preparation of data
@@ -82,9 +86,6 @@ d18 = d18[,-11]
 # Invoice shock
 d18 = d18[,-20]
 
-# Cancellation Flag
-d18 = d18[,-20]
-
 # Minimum/Maximum contract terms
 d18 = d18[,-8]
 d18 = d18[,-8]
@@ -92,12 +93,21 @@ d18 = d18[,-8]
 # Vorteilswelt customer since
 d18 = d18[,-16]
 
+#----------------------------------------------
+# Remove all entries with cancellation_flag = 1
+#----------------------------------------------
+
+#d18 = d18[-which(d18$Flag_cancellation == 1),]
+
+# Remove Cancellation Flag Column
+#d18 = d18[,-17]
+
 #------------------------
 # Deal with duplicate IDs
 #------------------------
 
 # If credit score is different, set highest score in all rows
-n_occur = data.frame(table(unique(d18[,-9])$ID))
+n_occur = data.frame(table(unique(d18[,-8])$ID))
 duplicates = n_occur[n_occur$Freq > 1,]
 for(i in 1:nrow(duplicates)){
   tempIDs = which(d18$ID == as.character(duplicates[i,]$Var1))
@@ -110,15 +120,9 @@ d18 = d18 %>% group_by(ID) %>% summarise(Client_type=first(Client_type), Age=fir
                                          Number_contractual_relationships=first(Number_contractual_relationships), Customer_for_years=first(Customer_for_years), Credit_rating_score=first(Credit_rating_score), 
                                          Total_consumption=first(Total_consumption), Open_item_amount=sum(Open_item_amount), Flag_advertising_permission_e.mail=first(Flag_advertising_permission_e.mail), 
                                          Flag_advertising_permission_post=first(Flag_advertising_permission_post), Flag_advertising_permission_telephone=first(Flag_advertising_permission_telephone), 
-                                         OptIn_data_protection_regulations=first(OptIn_data_protection_regulations), OptIn_newsletter=first(OptIn_newsletter), Factor_subsequent_payment=first(Factor_subsequent_payment), 
+                                         OptIn_data_protection_regulations=first(OptIn_data_protection_regulations), OptIn_newsletter=first(OptIn_newsletter), Factor_subsequent_payment=first(Factor_subsequent_payment),Flag_cancellation=first(Flag_cancellation), 
                                          Sum_contribution_margin_2=first(Sum_contribution_margin_2), Minimum_contract_duration=first(Minimum_contract_duration), Maximum_contract_duration=first(Maximum_contract_duration), 
                                          Vorteilswelt_customer_duraction=first(Vorteilswelt_customer_duraction))
-
-#-----------------------------------------------------
-# Deal with remaining specific problems in the dataset
-#-----------------------------------------------------
-
-# Todo
 
 #--------------------------
 # Prepare data for training
@@ -131,9 +135,38 @@ d18 = cbind(d18,d18_encoded)
 # Remove original Client type
 d18 = d18[,-2]
 
+# !!!!!Remove maximum contract duration and rename minimum to "contract duration" (might need to be removed for prediction data)
+d18 = d18[,-19]
+colnames(d18)[18] = "Contract_duration"
+
 # Move churn flag from 2019 to 2018 to have a target variable
-d19_churn = d19 %>% select(ID, Flag_cancellation)
-d19_churn = unique(d19_churn)
-colnames(d19_churn)[2] = "Target"
-d18_ready = merge(d18, d19_churn, by = "ID")
-d18_ready = d18_ready[,-16]
+#d19_churn = d19 %>% select(ID, Flag_cancellation)
+#d19_churn = unique(d19_churn)
+#colnames(d19_churn)[2] = "Target"
+#d18_ready = merge(d18, d19_churn, by = "ID")
+
+# Missing value imputation
+imputation = mice(d18[,-c(8,9,16)])
+d18_imputed = complete(imputation)
+d18_imputed = cbind(d18_imputed,d18[,c(8,9,16)])
+
+#------------------------------------------------------------------------------------------
+#-------------------------------- Exploration ---------------------------------------------
+#------------------------------------------------------------------------------------------
+
+sum(is.na(d18$Age))
+sum(is.na(d18$Credit_rating_score))
+sum(is.na(d18$OptIn_data_protection_regulations))
+sum(is.na(d18$OptIn_newsletter))
+sum(is.na(d18$Factor_subsequent_payment))
+sum(is.na(d18$Minimum_contract_duration))
+sum(is.na(d18$Maximum_contract_duration))
+sum(is.na(d18$Vorteilswelt_customer_duraction))
+
+d18$Flag_e.mail_deposited = as.numeric(d18$Flag_e.mail_deposited)
+d18$Flag_mobile_deposited = as.numeric(d18$Flag_mobile_deposited)
+d18$Flag_advertising_permission_e.mail = as.numeric(d18$Flag_advertising_permission_e.mail)
+d18$Flag_advertising_permission_post = as.numeric(d18$Flag_advertising_permission_post)
+d18$Flag_advertising_permission_telephone = as.numeric(d18$Flag_advertising_permission_telephone)
+d18$OptIn_data_protection_regulations = as.numeric(d18$OptIn_data_protection_regulations)
+d18$OptIn_newsletter = as.numeric(d18$OptIn_newsletter)
