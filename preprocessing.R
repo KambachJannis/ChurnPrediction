@@ -6,11 +6,9 @@ library(caret)
 
 # Load data
 d18 = read.csv2(file="Data_set_Jan18.csv", stringsAsFactors = FALSE)
-d19 = read.csv2(file="Data_set_Jan19.csv", stringsAsFactors = FALSE)
 
 # Rename first column because of unicode error
 colnames(d18)[1] = "ID"
-colnames(d19)[1] = "ID"
 
 #------------------------------
 # Syntactic preparation of data 
@@ -18,7 +16,6 @@ colnames(d19)[1] = "ID"
 
 # Set all missing values to NA
 d18[d18=="-"] = NA
-d19[d19=="-"] = NA
 
 # Convert numeric values from strings
 d18$Age = as.numeric(d18$Age)
@@ -36,6 +33,7 @@ d18$Flag_advertising_permission_post = as.factor(d18$Flag_advertising_permission
 d18$Flag_advertising_permission_telephone = as.factor(d18$Flag_advertising_permission_telephone)
 d18$OptIn_data_protection_regulations = as.factor(d18$OptIn_data_protection_regulations)
 d18$OptIn_newsletter = as.factor(d18$OptIn_newsletter)
+d18$Flag_cancellation = as.factor(d18$Flag_cancellation)
 
 # Prepare date values
 d18$Minimum_contract_term = as.Date(d18$Minimum_contract_term, format="%d.%m.%Y")
@@ -47,6 +45,10 @@ d18[which(is.na(d18$Open_item_amount)),]$Open_item_amount = 0
 
 # Remove 1 column where ID is NA
 d18 = d18[-which(is.na(d18$ID)),]
+
+# Change all -1 in customer_for_years to NA
+d18[d18$Customer_for_years==-1,]$Customer_for_years = NA
+
 
 #-----------------------------
 # Semantic preparation of data
@@ -135,12 +137,6 @@ imputation = mice(d18[,-c(8,9,16)])
 d18_imputed = complete(imputation)
 d18_imputed = cbind(d18_imputed,d18[,c(8,9,16)])
 
-# Move churn flag from 2019 to 2018 to have a target variable
-#d19_churn = d19 %>% select(ID, Flag_cancellation)
-#d19_churn = unique(d19_churn)
-#colnames(d19_churn)[2] = "Target"
-#d18_ready = merge(d18, d19_churn, by = "ID")
-
 #------------------------------------------------------------------------------------------
 #-------------------------------- Exploration ---------------------------------------------
 #------------------------------------------------------------------------------------------
@@ -154,10 +150,11 @@ sum(is.na(d18$Minimum_contract_duration))
 sum(is.na(d18$Maximum_contract_duration))
 sum(is.na(d18$Vorteilswelt_customer_duraction))
 
-d18$Flag_e.mail_deposited = as.numeric(d18$Flag_e.mail_deposited)
-d18$Flag_mobile_deposited = as.numeric(d18$Flag_mobile_deposited)
-d18$Flag_advertising_permission_e.mail = as.numeric(d18$Flag_advertising_permission_e.mail)
-d18$Flag_advertising_permission_post = as.numeric(d18$Flag_advertising_permission_post)
-d18$Flag_advertising_permission_telephone = as.numeric(d18$Flag_advertising_permission_telephone)
-d18$OptIn_data_protection_regulations = as.numeric(d18$OptIn_data_protection_regulations)
-d18$OptIn_newsletter = as.numeric(d18$OptIn_newsletter)
+d18[d18$Customer_for_years==-1,]
+
+### TODO
+# 1: final corrlelation matrix
+#     - exclude strongly correlated features
+#     - maybe feature engineering
+# 2: NA values grid
+# 3: more random exploration that might be cool -> graphs?
