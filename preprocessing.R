@@ -43,7 +43,7 @@ d18$Vorteilswelt_customer_since = as.Date(d18$Vorteilswelt_customer_since, forma
 # Set open item amount to 0 if NA
 d18[which(is.na(d18$Open_item_amount)),]$Open_item_amount = 0
 
-# Remove 1 column where ID is NA
+# Remove columns where ID is NA
 d18 = d18[-which(is.na(d18$ID)),]
 
 # Change all -1 in customer_for_years to NA
@@ -153,8 +153,11 @@ sum(is.na(d18$Vorteilswelt_customer_duraction))
 d18[d18$Customer_for_years==-1,]
 
 ### TODO
+# check for NAs in dates
+# check min/max duration differences
 # 1: final corrlelation matrix
 #     - exclude strongly correlated features
 #     - maybe feature engineering
 # 2: NA values grid
 # 3: more random exploration that might be cool -> graphs?
+
