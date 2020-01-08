@@ -43,11 +43,9 @@ d18$Vorteilswelt_customer_since = as.Date(d18$Vorteilswelt_customer_since, forma
 # Set open item amount to 0 if NA
 d18[which(is.na(d18$Open_item_amount)),]$Open_item_amount = 0
 
-# Introduce new factor level "No Answer" for OptIn features
-levels(d18$OptIn_data_protection_regulations) = c("0","1","No Answer")
-levels(d18$OptIn_newsletter) = c("0","1","No Answer")
-d18[which(is.na(d18$OptIn_data_protection_regulations)),]$OptIn_data_protection_regulations = "No Answer"
-d18[which(is.na(d18$OptIn_newsletter)),]$OptIn_newsletter = "No Answer"
+# Set OptIns to 0 when NA because they are Opt In
+d18[which(is.na(d18$OptIn_data_protection_regulations)),]$OptIn_data_protection_regulations = 0
+d18[which(is.na(d18$OptIn_newsletter)),]$OptIn_newsletter = 0
 
 # Remove columns where ID is NA
 d18 = d18[-which(is.na(d18$ID)),]
@@ -139,19 +137,15 @@ d18 = d18 %>% group_by(ID) %>% summarise(Client_type=first(Client_type), Age=fir
 # One-hot-encoding to eleminiate multi-level factors
 dummy_client = dummyVars(" ~ Client_type", data = d18)
 client_encoded = data.frame(predict(dummy_client, newdata = d18))
-dummy_dpr = dummyVars(" ~ OptIn_data_protection_regulations", data = d18)
-dpr_encoded = data.frame(predict(dummy_dpr, newdata = d18))
-dummy_newsletter = dummyVars(" ~ OptIn_newsletter", data = d18)
-newsletter_encoded = data.frame(predict(dummy_newsletter, newdata = d18))
-d18 = cbind(d18,client_encoded,dpr_encoded,newsletter_encoded)
+d18 = cbind(d18,client_encoded)
 
 # Remove original Client type and OptIns
-d18 = d18[,-c(2,14,15)]
+d18 = d18[,-2]
 
 # Missing value imputation
-imputation = mice(d18[,-c(8,9,15)])
+imputation = mice(d18[,-c(8,9,16)])
 d18_imputed = complete(imputation)
-d18_imputed = cbind(d18_imputed,d18[,c(8,9,15)])
+d18_imputed = cbind(d18_imputed,d18[,c(8,9,16)])
 
 #------------------------------------------------------------------------------------------
 #-------------------------------- Exploration ---------------------------------------------
