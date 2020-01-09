@@ -1,6 +1,7 @@
 library(mlr)
 library(DMwR)
 library(rpart.plot)
+library(FSelector)
 
 #------------------------------------
 # Handling imbalanced Data with SMOTE
@@ -25,6 +26,9 @@ learner_dt = makeLearner("classif.rpart")
 # Test and tune learners
 #-----------------------
 
+# Check feature importance
+generateFilterValuesData(task, method = c("information.gain","chi.squared", "gain.ratio")) %>% plotFilterValues()
+
 # 10-fold Cross-Validation
 rdesc = makeResampleDesc("CV",iters=10)
 rinst = makeResampleInstance(rdesc,task)
@@ -33,19 +37,15 @@ rinst = makeResampleInstance(rdesc,task)
 grid = makeTuneControlGrid()
 getParamSet(learner_dt)
 params = makeParamSet(
-  makeDiscreteParam("cp",values=seq(0.001,0.006,0.002)),
-  makeDiscreteParam("minsplit",values=c(1,5,10,50)),
-  makeDiscreteParam("maxdepth",values=c(20,30,50)),
-  makeDiscreteParam("parms",values=list(a=list(prior=c(.6,.4)),b=list(prior=c(.5,.5))))
+  # min number of observations in node for split attempt (default 20)
+  makeIntegerParam("minsplit",lower=1,upper=50),
+  # complexity of the tree, 0 = high, 1 = no tree (default 0.01)
+  makeNumericParam("cp",lower=0,upper=0.05),
+  # max depth of tree (default 30)
+  makeIntegerParam("maxdepth",lower=10,upper=50)
 )
-params_new = makeParamSet(
-  makeIntegerParam("minsplit",lower=0,upper=1),
-  makeIntegerParam("minbucket",lower=0,upper=1),
-  makeNumericParam("cp",lower=0,upper=1),
-  makeIntegerParam("maxcompete",lower=0,upper=1),
-  makeIntegerParam("maxdepth",lower=0,upper=1),
-)
-tuned = tuneParams(learner_dt,task,rdesc,control=grid,par.set=params,measures=list(mmce,tpr,tnr))
+dt_tuned = tuneParams(learner_dt,task,rdesc,control=grid,par.set=params,measures=list(mmce,tpr,tnr))
+learner_dt <- setHyperPars(learner_dt,par.vals=dt_tuned$x)
 
 # Logistic Regression
 res_lr = resample(learner_lr,task,rinst,measures=list(mmce,tpr,tnr),models=T)
@@ -61,9 +61,9 @@ res_dt$models[[1]]$learner.model
 #------------------
 
 #Logistic Regression
-model_lr = train(learner_lr,task)
+model_lr = mlr::train(learner_lr,task)
 #Decision Tree
-model_dt = train(learner_dt,task)
+model_dt = mlr::train(learner_dt,task)
 
 
 #--------------------------------
@@ -78,6 +78,4 @@ rpart.plot(getLearnerModel(model_dt))
 
 
 ### TODO
-# 1: maybe SMOTE optimization? -> needs to be after splitting training and test data
-# 2: visualization (https://christophm.github.io/interpretable-ml-book/logistic.html)
-# 3: prediction
+# 1: visualization (https://christophm.github.io/interpretable-ml-book/logistic.html)
