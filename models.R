@@ -7,7 +7,8 @@ library(FSelector)
 # Handling imbalanced Data with SMOTE
 #------------------------------------
 
-d18_learning = d18_imputed[,-c(1,14)]
+# remove IDs and Opt In Data protection regulations
+d18_learning = d18_imputed[,-c(1,11)]
 d18_balanced <- SMOTE(Flag_cancellation ~ .,d18_learning,perc.over=200,perc.under=300)
 
 #--------------------------
@@ -44,6 +45,7 @@ params = makeParamSet(
   # max depth of tree (default 30)
   makeIntegerParam("maxdepth",lower=10,upper=50)
 )
+# note: next line takes about 7 minutes on a decent pc to execute (500 iterations)
 dt_tuned = tuneParams(learner_dt,task,rdesc,control=grid,par.set=params,measures=list(mmce,tpr,tnr))
 learner_dt <- setHyperPars(learner_dt,par.vals=dt_tuned$x)
 
@@ -67,7 +69,7 @@ model_dt = mlr::train(learner_dt,task)
 
 
 #--------------------------------
-# Interpret and Visualize results -> on training or test data? or both?
+# Interpret and Visualize results
 #--------------------------------
 
 # Get coefficients from LogReg model
