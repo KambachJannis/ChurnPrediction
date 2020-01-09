@@ -13,17 +13,19 @@ d18_balanced <- SMOTE(Flag_cancellation ~ ., d18_learning, perc.over=200,perc.un
 #--------------------------
 
 # Logistic Regression
-task_lr = makeClassifTask(id="churn", data=d18_balanced, target="Flag_cancellation")
+task = makeClassifTask(id="churn", data=d18_balanced, target="Flag_cancellation")
 learner_lr = makeLearner("classif.logreg")
+learner_dt = makeLearner("classif.rpart")
 
 #--------------------------------
 # Test learner/task configuration
 #--------------------------------
 
 #LogReg with 10-fold Cross-Validation
-rdesc_lr = makeResampleDesc("CV", iters=10)
-rinst_lr = makeResampleInstance(rdesc_lr,task_lr)
-res_lr = resample(learner_lr,task_lr,rinst_lr,measures=list(mmce,tpr,tnr),models=T)
+rdesc = makeResampleDesc("CV", iters=10)
+rinst = makeResampleInstance(rdesc,task)
+res_lr = resample(learner_lr,task,rinst,measures=list(mmce,tpr,tnr),models=T)
+res_dt = resample(learner_dt,task,rinst,measures=list(mmce,tpr,tnr),models=T)
 res_lr$models[[1]]$learner.model
 
 #------------
