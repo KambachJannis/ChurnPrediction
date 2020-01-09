@@ -31,13 +31,21 @@ rinst = makeResampleInstance(rdesc,task)
 
 # Tune Decision Tree Learner
 grid = makeTuneControlGrid()
+getParamSet(learner_dt)
 params = makeParamSet(
   makeDiscreteParam("cp",values=seq(0.001,0.006,0.002)),
   makeDiscreteParam("minsplit",values=c(1,5,10,50)),
   makeDiscreteParam("maxdepth",values=c(20,30,50)),
   makeDiscreteParam("parms",values=list(a=list(prior=c(.6,.4)),b=list(prior=c(.5,.5))))
 )
-tuned = tuneParams(learner_dt,task,rdesc,control=grid,par.set=params,show.info=F,measures=list(mmce,tpr,tnr))
+params_new = makeParamSet(
+  makeIntegerParam("minsplit",lower=0,upper=1),
+  makeIntegerParam("minbucket",lower=0,upper=1),
+  makeNumericParam("cp",lower=0,upper=1),
+  makeIntegerParam("maxcompete",lower=0,upper=1),
+  makeIntegerParam("maxdepth",lower=0,upper=1),
+)
+tuned = tuneParams(learner_dt,task,rdesc,control=grid,par.set=params,measures=list(mmce,tpr,tnr))
 
 # Logistic Regression
 res_lr = resample(learner_lr,task,rinst,measures=list(mmce,tpr,tnr),models=T)
