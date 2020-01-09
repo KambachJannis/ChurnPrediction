@@ -151,6 +151,7 @@ d18_imputed = cbind(d18_imputed,d18[,c(8,9,16)])
 #-------------------------------- Exploration ---------------------------------------------
 #------------------------------------------------------------------------------------------
 
+# Missing Values
 sum(is.na(d18$Age))
 sum(is.na(d18$Credit_rating_score))
 sum(is.na(d18$OptIn_data_protection_regulations))
@@ -160,7 +161,18 @@ sum(is.na(d18$Minimum_contract_duration))
 sum(is.na(d18$Maximum_contract_duration))
 sum(is.na(d18$Vorteilswelt_customer_duration))
 
-d18[d18$Customer_for_years==-1,]
+# Correlation
+d18c = d18_imputed[,-1]
+d18c$Flag_e.mail_deposited = as.numeric(d18c$Flag_e.mail_deposited)
+d18c$Flag_mobile_deposited = as.numeric(d18c$Flag_mobile_deposited)
+d18c$Flag_advertising_permission_e.mail = as.numeric(d18c$Flag_advertising_permission_e.mail)
+d18c$Flag_advertising_permission_post = as.numeric(d18c$Flag_advertising_permission_post)
+d18c$Flag_advertising_permission_telephone = as.numeric(d18c$Flag_advertising_permission_telephone)
+d18c$OptIn_data_protection_regulations = as.numeric(d18c$OptIn_data_protection_regulations)
+d18c$OptIn_newsletter = as.numeric(d18c$OptIn_newsletter)
+d18c$Flag_cancellation = as.numeric(d18c$Flag_cancellation)
+findCorrelation(cor(d18c),cutoff=.75,names=T,verbose=T)
+
 
 ### TODO
 # 1: final corrlelation matrix
