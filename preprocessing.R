@@ -176,8 +176,4 @@ findCorrelation(cor(d18c),cutoff=.75,names=T,verbose=T)
 
 ### TODO
 # 1: final corrlelation matrix
-#     - exclude strongly correlated features
-#     - maybe feature engineering
 # 2: NA values grid
-# 3: more random exploration that might be cool -> graphs?
-
