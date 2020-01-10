@@ -5,7 +5,7 @@ library(corrr)
 library(caret)
 
 # Load data
-d18 = read.csv2(file="Data_set_Jan18.csv", stringsAsFactors = FALSE)
+d18 = read.csv2(file="Data_set_Jan19.csv", stringsAsFactors = FALSE)
 
 # Rename first column because of unicode error
 colnames(d18)[1] = "ID"
@@ -59,7 +59,7 @@ d18[d18$Customer_for_years==-1,]$Customer_for_years = NA
 #-----------------------------
 
 # Transform contract duration dates into days left based on time of dataset
-basedate = as.Date("01.01.2018","%d.%m.%Y")
+basedate = as.Date("01.01.2019","%d.%m.%Y")
 d18$Minimum_contract_duration = as.numeric(d18$Minimum_contract_term - basedate, "days")
 d18$Maximum_contract_duration = as.numeric(d18$Maximum_contract_term - basedate, "days")
 
