@@ -30,9 +30,6 @@ learner_dt = makeLearner("classif.rpart")
 # Test and tune learners
 #-----------------------
 
-# Check feature importance
-generateFilterValuesData(task, method = c("information.gain","chi.squared", "gain.ratio")) %>% plotFilterValues()
-
 # 10-fold Cross-Validation
 rdesc = makeResampleDesc("CV",iters=10)
 rinst = makeResampleInstance(rdesc,task)
