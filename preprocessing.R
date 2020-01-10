@@ -3,6 +3,7 @@ library(dplyr)
 library(mice)
 library(corrr)
 library(caret)
+set.seed(420)
 
 # Load data
 d18 = read.csv2(file="Data_set_Jan19.csv", stringsAsFactors = FALSE)
@@ -144,7 +145,7 @@ d18 = d18[,-2]
 
 # Missing value imputation
 imputation = mice(d18[,-c(8,9,16)])
-d18_imputed = complete(imputation)
+d18_imputed = mice::complete(imputation)
 d18_imputed = cbind(d18_imputed,d18[,c(8,9,16)])
 
 #------------------------------------------------------------------------------------------

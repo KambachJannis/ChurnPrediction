@@ -5,6 +5,7 @@ library(DMwR)
 library(rpart.plot)
 library(ggplot2)
 library(FSelector)
+set.seed(420)
 
 #------------------------------------
 # Handling imbalanced Data with SMOTE
@@ -53,10 +54,6 @@ learner_dt <- setHyperPars(learner_dt,par.vals=dt_tuned$x)
 res_lr = resample(learner_lr,task,rinst,measures=list(acc,mmce,tpr,tnr),models=T)
 # Decision Tree
 res_dt = resample(learner_dt,task,rinst,measures=list(acc,mmce,tpr,tnr),models=T)
-
-# View models
-res_lr$models[[1]]$learner.model
-res_dt$models[[1]]$learner.model
 
 #------------------
 # Train final model

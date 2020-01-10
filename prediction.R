@@ -3,6 +3,7 @@ library(dplyr)
 library(mice)
 library(corrr)
 library(caret)
+set.seed(420)
 
 # Load data
 d19t = read.csv2(file="Data_set_Oct19.csv", stringsAsFactors = FALSE)
