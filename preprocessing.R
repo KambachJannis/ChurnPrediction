@@ -37,13 +37,17 @@ d18$Flag_cancellation = as.factor(d18$Flag_cancellation)
 
 # Prepare date values
 d18$Minimum_contract_term = as.Date(d18$Minimum_contract_term, format="%d.%m.%Y")
-d18$Maximum_contract_term = as.Date(d18$Minimum_contract_term, format="%d.%m.%Y")
+d18$Maximum_contract_term = as.Date(d18$Maximum_contract_term, format="%d.%m.%Y")
 d18$Vorteilswelt_customer_since = as.Date(d18$Vorteilswelt_customer_since, format="%d.%m.%Y")
 
 # Set open item amount to 0 if NA
 d18[which(is.na(d18$Open_item_amount)),]$Open_item_amount = 0
 
-# Remove 1 column where ID is NA
+# Set OptIns to 0 when NA because they are Opt In
+d18[which(is.na(d18$OptIn_data_protection_regulations)),]$OptIn_data_protection_regulations = 0
+d18[which(is.na(d18$OptIn_newsletter)),]$OptIn_newsletter = 0
+
+# Remove columns where ID is NA
 d18 = d18[-which(is.na(d18$ID)),]
 
 # Change all -1 in customer_for_years to NA
@@ -55,13 +59,21 @@ d18[d18$Customer_for_years==-1,]$Customer_for_years = NA
 #-----------------------------
 
 # Transform contract duration dates into days left based on time of dataset
-basedate = as.Date("01.02.2018","%d.%m.%Y")
+basedate = as.Date("01.01.2018","%d.%m.%Y")
 d18$Minimum_contract_duration = as.numeric(d18$Minimum_contract_term - basedate, "days")
 d18$Maximum_contract_duration = as.numeric(d18$Maximum_contract_term - basedate, "days")
 
+# Use contract difference difference instead of maximum contract duration
+d18$Contract_duration_difference = d18$Maximum_contract_duration - d18$Minimum_contract_duration
+# Set contract duration difference to 0 if number of contracts is 1
+d18[which(d18$Number_contractual_relationships==1),]$Contract_duration_difference = 0
+
+
 # Transform Vorteilswelt signup date into membership duration based on current date
 basedate2 = as.Date("01.01.2020", "%d.%m.%Y")
-d18$Vorteilswelt_customer_duraction = as.numeric(basedate2 - d18$Vorteilswelt_customer_since, "days")
+d18$Vorteilswelt_customer_duration = as.numeric(basedate2 - d18$Vorteilswelt_customer_since, "days")
+# Set duration to 0 if NA
+d18[which(is.na(d18$Vorteilswelt_customer_duration)),]$Vorteilswelt_customer_duration = 0
 
 # Merge client type and title into single 4-level factor
 for(i in 1:nrow(d18)){
@@ -88,9 +100,10 @@ d18 = d18[,-11]
 # Invoice shock
 d18 = d18[,-20]
 
-# Minimum/Maximum contract terms
+# Minimum/Maximum contract terms + Maximum contract duration
 d18 = d18[,-8]
 d18 = d18[,-8]
+d18 = d18[,-21]
 
 # Vorteilswelt customer since
 d18 = d18[,-16]
@@ -114,23 +127,20 @@ d18 = d18 %>% group_by(ID) %>% summarise(Client_type=first(Client_type), Age=fir
                                          Total_consumption=first(Total_consumption), Open_item_amount=sum(Open_item_amount), Flag_advertising_permission_e.mail=first(Flag_advertising_permission_e.mail), 
                                          Flag_advertising_permission_post=first(Flag_advertising_permission_post), Flag_advertising_permission_telephone=first(Flag_advertising_permission_telephone), 
                                          OptIn_data_protection_regulations=first(OptIn_data_protection_regulations), OptIn_newsletter=first(OptIn_newsletter), Factor_subsequent_payment=first(Factor_subsequent_payment),Flag_cancellation=first(Flag_cancellation), 
-                                         Sum_contribution_margin_2=first(Sum_contribution_margin_2), Minimum_contract_duration=first(Minimum_contract_duration), Maximum_contract_duration=first(Maximum_contract_duration), 
-                                         Vorteilswelt_customer_duraction=first(Vorteilswelt_customer_duraction))
+                                         Sum_contribution_margin_2=first(Sum_contribution_margin_2), Minimum_contract_duration=first(Minimum_contract_duration), Contract_duration_difference=first(Contract_duration_difference), 
+                                         Vorteilswelt_customer_duration=first(Vorteilswelt_customer_duration))
 
 #--------------------------
 # Prepare data for training
 #--------------------------
 
 # One-hot-encoding to eleminiate multi-level factors
-dummy = dummyVars(" ~ Client_type", data = d18)
-d18_encoded = data.frame(predict(dummy, newdata = d18))
-d18 = cbind(d18,d18_encoded)
-# Remove original Client type
-d18 = d18[,-2]
+dummy_client = dummyVars(" ~ Client_type", data = d18)
+client_encoded = data.frame(predict(dummy_client, newdata = d18))
+d18 = cbind(d18,client_encoded)
 
-# !!!!!Remove maximum contract duration and rename minimum to "contract duration" (might need to be removed for prediction data)
-d18 = d18[,-19]
-colnames(d18)[18] = "Contract_duration"
+# Remove original Client type and OptIns
+d18 = d18[,-2]
 
 # Missing value imputation
 imputation = mice(d18[,-c(8,9,16)])
@@ -141,6 +151,7 @@ d18_imputed = cbind(d18_imputed,d18[,c(8,9,16)])
 #-------------------------------- Exploration ---------------------------------------------
 #------------------------------------------------------------------------------------------
 
+# Missing Values
 sum(is.na(d18$Age))
 sum(is.na(d18$Credit_rating_score))
 sum(is.na(d18$OptIn_data_protection_regulations))
@@ -148,9 +159,20 @@ sum(is.na(d18$OptIn_newsletter))
 sum(is.na(d18$Factor_subsequent_payment))
 sum(is.na(d18$Minimum_contract_duration))
 sum(is.na(d18$Maximum_contract_duration))
-sum(is.na(d18$Vorteilswelt_customer_duraction))
+sum(is.na(d18$Vorteilswelt_customer_duration))
 
-d18[d18$Customer_for_years==-1,]
+# Correlation
+d18c = d18_imputed[,-1]
+d18c$Flag_e.mail_deposited = as.numeric(d18c$Flag_e.mail_deposited)
+d18c$Flag_mobile_deposited = as.numeric(d18c$Flag_mobile_deposited)
+d18c$Flag_advertising_permission_e.mail = as.numeric(d18c$Flag_advertising_permission_e.mail)
+d18c$Flag_advertising_permission_post = as.numeric(d18c$Flag_advertising_permission_post)
+d18c$Flag_advertising_permission_telephone = as.numeric(d18c$Flag_advertising_permission_telephone)
+d18c$OptIn_data_protection_regulations = as.numeric(d18c$OptIn_data_protection_regulations)
+d18c$OptIn_newsletter = as.numeric(d18c$OptIn_newsletter)
+d18c$Flag_cancellation = as.numeric(d18c$Flag_cancellation)
+findCorrelation(cor(d18c),cutoff=.75,names=T,verbose=T)
+
 
 ### TODO
 # 1: final corrlelation matrix
@@ -158,3 +180,4 @@ d18[d18$Customer_for_years==-1,]
 #     - maybe feature engineering
 # 2: NA values grid
 # 3: more random exploration that might be cool -> graphs?
+
