@@ -76,21 +76,23 @@ model_lr$learner.model
 rpart.plot(getLearnerModel(model_dt))
 
 # Feature Importance Plot
-df = data.frame(imp=model_dt$learner.model$variable.importance)
+df = data.frame(importance=model_dt$learner.model$variable.importance)
 df2 <- df %>% 
   tibble::rownames_to_column() %>% 
   dplyr::rename("variable" = rowname) %>% 
-  dplyr::arrange(imp) %>%
+  dplyr::arrange(importance) %>%
   dplyr::mutate(variable = forcats::fct_inorder(variable))
 ggplot2::ggplot(df2) +
-  geom_col(aes(x = variable, y = imp),
+  geom_col(aes(x = variable, y = importance),
            col = "black", show.legend = F) +
   coord_flip() +
   scale_fill_grey() +
   theme_bw()
 
+# Confusion Matrix
+print(calculateConfusionMatrix(res_dt$pred, relative = TRUE, sums = FALSE, set = "both"))
+
 ### TODO
 # 1: visualization (https://christophm.github.io/interpretable-ml-book/logistic.html)
 #     - feature importance
-#     - confusion matrix
 #     - better tree?
